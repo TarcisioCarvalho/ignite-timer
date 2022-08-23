@@ -1,4 +1,7 @@
 import React, { ReactNode } from 'react'
+import { ActionTypes, addNewCycleAction, interruptCurrentCycleAsFinishedAction, markCurrentCycleAsFinishedAction } from '../reducers/cycles/actions';
+import { Cycle, cyclesReducer } from '../reducers/cycles/reducer';
+
 
 
 interface CreateCycleData{
@@ -7,7 +10,7 @@ interface CreateCycleData{
 }
 
 
-interface Cycle{
+/* interface Cycle{
     id: String;
     task: String;
     minutesAmount: Number;
@@ -15,7 +18,7 @@ interface Cycle{
     interruptedDate?: Date;
     finishDate?: Date;
   }
-
+ */
 interface CyclesContextType{
   cycles:Cycle[] ;
   activeCycle: Cycle | undefined
@@ -33,13 +36,41 @@ interface CyclesContextType{
     children: ReactNode;
   }
 
+  interface CyclesState{
+    cycles: Cycle[];
+    activeCycleId: String | null;
+  }
+
   export function CyclesContextProvider({children}:CyclesContextProviderProps){
 
-    const [cycles, setCycles] = React.useState<Cycle[]>([])
-    const [activeCycleId, setActiveCycleId] = React.useState<String | null>(null);
-    const [amountSecondsPassed, setAmountSecondsPassed] =  React.useState( 0 ) ;
+    const [cyclesState, dipatch] = React.useReducer( cyclesReducer
+     ,{
+      cycles: [],
+      activeCycleId: null,
+    },()=>{
+      const storedStateAsJSON = localStorage.getItem('@ignite-timer:cycles-state-1.0.0');
+      if(storedStateAsJSON) return JSON.parse(storedStateAsJSON);
+    }
+    
+    )
+
+    
+   
+    const [amountSecondsPassed, setAmountSecondsPassed] =  React.useState( ()=>{
+
+      
 
 
+      return 0
+    } ) ;
+
+    React.useEffect(()=>{
+
+      const stateJSON = JSON.stringify(cyclesState);
+      localStorage.setItem('@ignite-timer:cycles-state-1.0.0',stateJSON);
+    },[cyclesState])
+
+    const {cycles, activeCycleId} = cyclesState;
     const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
 
     function setSecondsPassed(seconds: Number){
@@ -47,22 +78,34 @@ interface CyclesContextType{
       }
       
       function markCurrentCycleAsFinished(){
-        setCycles((state) => state.map(cycle => {
+        dipatch(markCurrentCycleAsFinishedAction()/* {
+          type: ActionTypes.MARK_CURRENT_CYCLE_AS_FINISHED,
+          payload:{
+            activeCycleId,
+          }
+        } */);
+        /* setCycles((state) => state.map(cycle => {
           if (cycle.id === activeCycleId) {
             return { ...cycle, finishDate: new Date() }
         }
         return cycle ;
-      }))
+      })) */
       }
 
       function InterruptCurrentCycle(){
-      
+        dipatch(interruptCurrentCycleAsFinishedAction()/* {
+          type: ActionTypes.INTERRUPT_CURRENT_CYCLE,
+          payload:{
+            activeCycleId,
+          }
+        } */);
+      /* 
         setCycles(state => state.map(cycle => {
           if(cycle.id === activeCycleId){
             return {...cycle, interruptedDate: new Date() }
           }
           return cycle ;
-        }))
+        })) */
     
         setActiveCycleId(null);
     }
@@ -74,8 +117,14 @@ interface CyclesContextType{
           minutesAmount:data.MinutesAmount,
           startDate: new Date(),
         }
-        setCycles(state => [...state,newCycle]);
-        setActiveCycleId(newCycle.id);
+        dipatch(addNewCycleAction(newCycle)/* {
+          type: ActionTypes.ADD_NEW_CYCLE,
+          payload:{
+            newCycle,
+          }
+        } */);
+       // setCycles(state => [...state,newCycle]);
+      //  setActiveCycleId(newCycle.id);
         setAmountSecondsPassed(0);
        // reset();
       }
